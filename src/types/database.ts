@@ -6,412 +6,609 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          id: string
-          email: string
-          business_name: string
-          business_type: string
-          phone_number: string | null
-          address: string | null
-          city: string | null
-          province: string | null
-          postal_code: string | null
-          subscription_plan: 'starter' | 'professional' | 'enterprise'
-          subscription_status: 'active' | 'inactive' | 'trial' | 'cancelled'
-          trial_ends_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id: string
-          email: string
-          business_name: string
-          business_type: string
-          phone_number?: string | null
-          address?: string | null
-          city?: string | null
-          province?: string | null
-          postal_code?: string | null
-          subscription_plan?: 'starter' | 'professional' | 'enterprise'
-          subscription_status?: 'active' | 'inactive' | 'trial' | 'cancelled'
-          trial_ends_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          email?: string
-          business_name?: string
-          business_type?: string
-          phone_number?: string | null
-          address?: string | null
-          city?: string | null
-          province?: string | null
-          postal_code?: string | null
-          subscription_plan?: 'starter' | 'professional' | 'enterprise'
-          subscription_status?: 'active' | 'inactive' | 'trial' | 'cancelled'
-          trial_ends_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
       chatbots: {
         Row: {
+          ai_personality: string | null
+          auto_reply_enabled: boolean | null
+          business_description: string | null
+          business_hours: Json | null
+          created_at: string | null
+          human_handover_keywords: string[] | null
           id: string
-          profile_id: string
+          is_active: boolean | null
           name: string
-          whatsapp_phone_number: string
-          whatsapp_phone_number_id: string
-          whatsapp_business_account_id: string
-          welcome_message: string
-          fallback_message: string
-          business_hours_start: string | null
-          business_hours_end: string | null
-          timezone: string
-          is_active: boolean
-          ai_model: 'gemini' | 'openai'
-          response_tone: 'formal' | 'casual' | 'friendly'
-          max_response_length: number
-          created_at: string
-          updated_at: string
+          updated_at: string | null
+          user_id: string | null
+          whatsapp_business_account_id: string | null
+          whatsapp_number: string | null
         }
         Insert: {
+          ai_personality?: string | null
+          auto_reply_enabled?: boolean | null
+          business_description?: string | null
+          business_hours?: Json | null
+          created_at?: string | null
+          human_handover_keywords?: string[] | null
           id?: string
-          profile_id: string
+          is_active?: boolean | null
           name: string
-          whatsapp_phone_number: string
-          whatsapp_phone_number_id: string
-          whatsapp_business_account_id: string
-          welcome_message: string
-          fallback_message: string
-          business_hours_start?: string | null
-          business_hours_end?: string | null
-          timezone?: string
-          is_active?: boolean
-          ai_model?: 'gemini' | 'openai'
-          response_tone?: 'formal' | 'casual' | 'friendly'
-          max_response_length?: number
-          created_at?: string
-          updated_at?: string
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp_business_account_id?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
+          ai_personality?: string | null
+          auto_reply_enabled?: boolean | null
+          business_description?: string | null
+          business_hours?: Json | null
+          created_at?: string | null
+          human_handover_keywords?: string[] | null
           id?: string
-          profile_id?: string
+          is_active?: boolean | null
           name?: string
-          whatsapp_phone_number?: string
-          whatsapp_phone_number_id?: string
-          whatsapp_business_account_id?: string
-          welcome_message?: string
-          fallback_message?: string
-          business_hours_start?: string | null
-          business_hours_end?: string | null
-          timezone?: string
-          is_active?: boolean
-          ai_model?: 'gemini' | 'openai'
-          response_tone?: 'formal' | 'casual' | 'friendly'
-          max_response_length?: number
-          created_at?: string
-          updated_at?: string
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp_business_account_id?: string | null
+          whatsapp_number?: string | null
         }
-      }
-      conversations: {
-        Row: {
-          id: string
-          chatbot_id: string
-          customer_phone: string
-          customer_name: string | null
-          status: 'active' | 'closed' | 'transferred'
-          last_message_at: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          chatbot_id: string
-          customer_phone: string
-          customer_name?: string | null
-          status?: 'active' | 'closed' | 'transferred'
-          last_message_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          chatbot_id?: string
-          customer_phone?: string
-          customer_name?: string | null
-          status?: 'active' | 'closed' | 'transferred'
-          last_message_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      messages: {
-        Row: {
-          id: string
-          conversation_id: string
-          whatsapp_message_id: string | null
-          sender_type: 'customer' | 'bot' | 'agent'
-          content: string
-          message_type: 'text' | 'image' | 'document' | 'audio' | 'video'
-          metadata: Json | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          conversation_id: string
-          whatsapp_message_id?: string | null
-          sender_type: 'customer' | 'bot' | 'agent'
-          content: string
-          message_type?: 'text' | 'image' | 'document' | 'audio' | 'video'
-          metadata?: Json | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          conversation_id?: string
-          whatsapp_message_id?: string | null
-          sender_type?: 'customer' | 'bot' | 'agent'
-          content?: string
-          message_type?: 'text' | 'image' | 'document' | 'audio' | 'video'
-          metadata?: Json | null
-          created_at?: string
-        }
-      }
-      knowledge_base: {
-        Row: {
-          id: string
-          chatbot_id: string
-          question: string
-          answer: string
-          category: string | null
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          chatbot_id: string
-          question: string
-          answer: string
-          category?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          chatbot_id?: string
-          question?: string
-          answer?: string
-          category?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      products: {
-        Row: {
-          id: string
-          profile_id: string
-          name: string
-          description: string | null
-          price: number
-          currency: string
-          sku: string | null
-          stock_quantity: number | null
-          category: string | null
-          image_url: string | null
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          profile_id: string
-          name: string
-          description?: string | null
-          price: number
-          currency?: string
-          sku?: string | null
-          stock_quantity?: number | null
-          category?: string | null
-          image_url?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          profile_id?: string
-          name?: string
-          description?: string | null
-          price?: number
-          currency?: string
-          sku?: string | null
-          stock_quantity?: number | null
-          category?: string | null
-          image_url?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      orders: {
-        Row: {
-          id: string
-          profile_id: string
-          conversation_id: string | null
-          customer_phone: string
-          customer_name: string | null
-          customer_address: string | null
-          total_amount: number
-          currency: string
-          status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-          payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
-          payment_method: string | null
-          midtrans_order_id: string | null
-          notes: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          profile_id: string
-          conversation_id?: string | null
-          customer_phone: string
-          customer_name?: string | null
-          customer_address?: string | null
-          total_amount: number
-          currency?: string
-          status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-          payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
-          payment_method?: string | null
-          midtrans_order_id?: string | null
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          profile_id?: string
-          conversation_id?: string | null
-          customer_phone?: string
-          customer_name?: string | null
-          customer_address?: string | null
-          total_amount?: number
-          currency?: string
-          status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-          payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
-          payment_method?: string | null
-          midtrans_order_id?: string | null
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      workflows: {
-        Row: {
-          id: string
-          profile_id: string
-          name: string
-          description: string | null
-          n8n_workflow_id: string
-          trigger_type: 'webhook' | 'schedule' | 'manual'
-          trigger_config: Json | null
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          profile_id: string
-          name: string
-          description?: string | null
-          n8n_workflow_id: string
-          trigger_type?: 'webhook' | 'schedule' | 'manual'
-          trigger_config?: Json | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          profile_id?: string
-          name?: string
-          description?: string | null
-          n8n_workflow_id?: string
-          trigger_type?: 'webhook' | 'schedule' | 'manual'
-          trigger_config?: Json | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversation_analytics: {
         Row: {
-          id: string
-          profile_id: string
-          date: string
-          total_conversations: number
-          total_messages: number
-          avg_response_time: number | null
-          customer_satisfaction: number | null
+          ai_resolution_rate: number | null
+          avg_response_time_seconds: number | null
+          chatbot_id: string | null
           conversion_rate: number | null
-          created_at: string
+          created_at: string | null
+          customer_satisfaction_avg: number | null
+          date: string
+          id: string
+          revenue_generated: number | null
+          top_intents: Json | null
+          total_conversations: number | null
+          total_messages: number | null
         }
         Insert: {
-          id?: string
-          profile_id: string
-          date: string
-          total_conversations?: number
-          total_messages?: number
-          avg_response_time?: number | null
-          customer_satisfaction?: number | null
+          ai_resolution_rate?: number | null
+          avg_response_time_seconds?: number | null
+          chatbot_id?: string | null
           conversion_rate?: number | null
-          created_at?: string
+          created_at?: string | null
+          customer_satisfaction_avg?: number | null
+          date: string
+          id?: string
+          revenue_generated?: number | null
+          top_intents?: Json | null
+          total_conversations?: number | null
+          total_messages?: number | null
         }
         Update: {
-          id?: string
-          profile_id?: string
-          date?: string
-          total_conversations?: number
-          total_messages?: number
-          avg_response_time?: number | null
-          customer_satisfaction?: number | null
+          ai_resolution_rate?: number | null
+          avg_response_time_seconds?: number | null
+          chatbot_id?: string | null
           conversion_rate?: number | null
-          created_at?: string
+          created_at?: string | null
+          customer_satisfaction_avg?: number | null
+          date?: string
+          id?: string
+          revenue_generated?: number | null
+          top_intents?: Json | null
+          total_conversations?: number | null
+          total_messages?: number | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_analytics_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          assigned_to_human: boolean | null
+          chatbot_id: string | null
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string
+          customer_profile_pic_url: string | null
+          id: string
+          last_message_at: string | null
+          metadata: Json | null
+          satisfaction_feedback: string | null
+          satisfaction_rating: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to_human?: boolean | null
+          chatbot_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone: string
+          customer_profile_pic_url?: string | null
+          id?: string
+          last_message_at?: string | null
+          metadata?: Json | null
+          satisfaction_feedback?: string | null
+          satisfaction_rating?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to_human?: boolean | null
+          chatbot_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string
+          customer_profile_pic_url?: string | null
+          id?: string
+          last_message_at?: string | null
+          metadata?: Json | null
+          satisfaction_feedback?: string | null
+          satisfaction_rating?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_base: {
+        Row: {
+          answer: string
+          category: string | null
+          chatbot_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          question: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          answer: string
+          category?: string | null
+          chatbot_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          question: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          answer?: string
+          category?: string | null
+          chatbot_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          question?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          ai_confidence_score: number | null
+          ai_generated: boolean | null
+          content: string
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          intent_detected: string | null
+          is_from_customer: boolean
+          media_url: string | null
+          message_type: string | null
+          processing_time_ms: number | null
+          timestamp: string | null
+          whatsapp_message_id: string | null
+        }
+        Insert: {
+          ai_confidence_score?: number | null
+          ai_generated?: boolean | null
+          content: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          intent_detected?: string | null
+          is_from_customer: boolean
+          media_url?: string | null
+          message_type?: string | null
+          processing_time_ms?: number | null
+          timestamp?: string | null
+          whatsapp_message_id?: string | null
+        }
+        Update: {
+          ai_confidence_score?: number | null
+          ai_generated?: boolean | null
+          content?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          intent_detected?: string | null
+          is_from_customer?: boolean
+          media_url?: string | null
+          message_type?: string | null
+          processing_time_ms?: number | null
+          timestamp?: string | null
+          whatsapp_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          chatbot_id: string | null
+          conversation_id: string | null
+          created_at: string | null
+          customer_address: string | null
+          customer_name: string | null
+          customer_phone: string
+          discount_amount: number | null
+          id: string
+          notes: string | null
+          order_number: string
+          payment_link: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string | null
+          products: Json
+          shipping_cost: number | null
+          shipping_method: string | null
+          status: string | null
+          subtotal_amount: number
+          total_amount: number
+          tracking_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          chatbot_id?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_address?: string | null
+          customer_name?: string | null
+          customer_phone: string
+          discount_amount?: number | null
+          id?: string
+          notes?: string | null
+          order_number: string
+          payment_link?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          products: Json
+          shipping_cost?: number | null
+          shipping_method?: string | null
+          status?: string | null
+          subtotal_amount: number
+          total_amount: number
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          chatbot_id?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_address?: string | null
+          customer_name?: string | null
+          customer_phone?: string
+          discount_amount?: number | null
+          id?: string
+          notes?: string | null
+          order_number?: string
+          payment_link?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+          products?: Json
+          shipping_cost?: number | null
+          shipping_method?: string | null
+          status?: string | null
+          subtotal_amount?: number
+          total_amount?: number
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string | null
+          chatbot_id: string | null
+          created_at: string | null
+          description: string | null
+          dimensions: Json | null
+          id: string
+          images: string[] | null
+          is_active: boolean | null
+          min_stock_alert: number | null
+          name: string
+          original_price: number | null
+          price: number
+          sku: string | null
+          stock_quantity: number | null
+          tags: string[] | null
+          updated_at: string | null
+          weight: number | null
+        }
+        Insert: {
+          category?: string | null
+          chatbot_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          dimensions?: Json | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          min_stock_alert?: number | null
+          name: string
+          original_price?: number | null
+          price: number
+          sku?: string | null
+          stock_quantity?: number | null
+          tags?: string[] | null
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Update: {
+          category?: string | null
+          chatbot_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          dimensions?: Json | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          min_stock_alert?: number | null
+          name?: string
+          original_price?: number | null
+          price?: number
+          sku?: string | null
+          stock_quantity?: number | null
+          tags?: string[] | null
+          updated_at?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          business_description: string | null
+          business_goals: string | null
+          business_name: string
+          business_type: string | null
+          city: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          industry: string | null
+          onboarding_completed: boolean | null
+          phone: string | null
+          phone_number: string | null
+          postal_code: string | null
+          preferred_language: string | null
+          province: string | null
+          subscription_plan: string | null
+          subscription_status: string | null
+          subscription_tier: string | null
+          target_audience: string | null
+          timezone: string | null
+          trial_ends_at: string | null
+          updated_at: string | null
+          website: string | null
+          whatsapp_number: string | null
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          business_description?: string | null
+          business_goals?: string | null
+          business_name: string
+          business_type?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          industry?: string | null
+          onboarding_completed?: boolean | null
+          phone?: string | null
+          phone_number?: string | null
+          postal_code?: string | null
+          preferred_language?: string | null
+          province?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          target_audience?: string | null
+          timezone?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string | null
+          website?: string | null
+          whatsapp_number?: string | null
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          business_description?: string | null
+          business_goals?: string | null
+          business_name?: string
+          business_type?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          industry?: string | null
+          onboarding_completed?: boolean | null
+          phone?: string | null
+          phone_number?: string | null
+          postal_code?: string | null
+          preferred_language?: string | null
+          province?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          target_audience?: string | null
+          timezone?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string | null
+          website?: string | null
+          whatsapp_number?: string | null
+        }
+        Relationships: []
       }
       usage_tracking: {
         Row: {
-          id: string
-          profile_id: string
-          feature_name: string
-          usage_count: number
+          created_at: string | null
           date: string
-          created_at: string
+          feature_used: string
+          id: string
+          metadata: Json | null
+          usage_count: number | null
+          user_id: string | null
         }
         Insert: {
-          id?: string
-          profile_id: string
-          feature_name: string
-          usage_count?: number
+          created_at?: string | null
           date: string
-          created_at?: string
+          feature_used: string
+          id?: string
+          metadata?: Json | null
+          usage_count?: number | null
+          user_id?: string | null
         }
         Update: {
-          id?: string
-          profile_id?: string
-          feature_name?: string
-          usage_count?: number
+          created_at?: string | null
           date?: string
-          created_at?: string
+          feature_used?: string
+          id?: string
+          metadata?: Json | null
+          usage_count?: number | null
+          user_id?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "usage_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflows: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          execution_count: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          trigger_conditions: Json | null
+          updated_at: string | null
+          user_id: string | null
+          workflow_steps: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          trigger_conditions?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+          workflow_steps?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          trigger_conditions?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+          workflow_steps?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -428,3 +625,100 @@ export interface Database {
     }
   }
 }
+
+type PublicSchema = Database[keyof Database]
+
+export type Tables<
+  PublicTableNameOrOptions extends
+    | keyof (PublicSchema['Tables'] & PublicSchema['Views'])
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof (Database[PublicTableNameOrOptions['schema']]['Tables'] &
+        Database[PublicTableNameOrOptions['schema']]['Views'])
+    : never = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions['schema']]['Tables'] &
+      Database[PublicTableNameOrOptions['schema']]['Views'])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : PublicTableNameOrOptions extends keyof (PublicSchema['Tables'] &
+        PublicSchema['Views'])
+    ? (PublicSchema['Tables'] &
+        PublicSchema['Views'])[PublicTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  PublicTableNameOrOptions extends
+    | keyof PublicSchema['Tables']
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
+    : never = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : PublicTableNameOrOptions extends keyof PublicSchema['Tables']
+    ? PublicSchema['Tables'][PublicTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  PublicTableNameOrOptions extends
+    | keyof PublicSchema['Tables']
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
+    : never = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : PublicTableNameOrOptions extends keyof PublicSchema['Tables']
+    ? PublicSchema['Tables'][PublicTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  PublicEnumNameOrOptions extends
+    | keyof PublicSchema['Enums']
+    | { schema: keyof Database },
+  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicEnumNameOrOptions['schema']]['Enums']
+    : never = never,
+> = PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : PublicEnumNameOrOptions extends keyof PublicSchema['Enums']
+    ? PublicSchema['Enums'][PublicEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof PublicSchema['CompositeTypes']
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema['CompositeTypes']
+    ? PublicSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+    : never

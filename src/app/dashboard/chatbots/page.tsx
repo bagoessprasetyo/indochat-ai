@@ -7,9 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { PlusIcon, ChatBubbleLeftRightIcon, PencilIcon, TrashIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline'
 import { toast } from 'sonner'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useRequireAuth } from '@/contexts/auth-context'
@@ -26,23 +25,30 @@ const chatbotSchema = z.object({
 
 type ChatbotFormData = z.infer<typeof chatbotSchema>
 
+// Updated interface to match actual database schema
 interface Chatbot {
   id: string
+  user_id: string | null
   name: string
   whatsapp_number: string | null
+  whatsapp_business_account_id: string | null
   business_description: string | null
   ai_personality: string | null
+  business_hours: any | null
+  auto_reply_enabled: boolean | null
+  human_handover_keywords: string[] | null
   is_active: boolean | null
   created_at: string | null
   updated_at: string | null
 }
 
 export default function ChatbotsPage() {
-  const { profile } = useRequireAuth()
+  const { user, profile } = useRequireAuth()
   const [chatbots, setChatbots] = useState<Chatbot[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [authDebug, setAuthDebug] = useState<any>(null)
   const [formData, setFormData] = useState<ChatbotFormData>({
     name: '',
     whatsapp_number: '',
@@ -53,22 +59,46 @@ export default function ChatbotsPage() {
 
   const supabase = createSupabaseClient()
 
+  // Debug authentication state
+  useEffect(() => {
+    const debugAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setAuthDebug({
+        session: !!session,
+        user: !!user,
+        profile: !!profile,
+        userId: user?.id,
+        profileId: profile?.id
+      })
+    }
+    debugAuth()
+  }, [user, profile])
+
   // Fetch chatbots from database
   const fetchChatbots = async () => {
+    if (!user?.id) {
+      console.log('No user ID available for fetching chatbots')
+      setIsLoading(false)
+      return
+    }
+
     try {
       setIsLoading(true)
+      console.log('Fetching chatbots for user:', user.id)
+      
       const { data, error } = await supabase
         .from('chatbots')
         .select('*')
-        .eq('user_id', profile?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Error fetching chatbots:', error)
-        toast.error('Gagal memuat data chatbot')
+        toast.error('Gagal memuat data chatbot: ' + error.message)
         return
       }
 
+      console.log('Fetched chatbots:', data)
       setChatbots(data || [])
     } catch (error) {
       console.error('Error fetching chatbots:', error)
@@ -80,10 +110,10 @@ export default function ChatbotsPage() {
 
   // Load chatbots on component mount
   useEffect(() => {
-    if (profile?.id) {
+    if (user?.id) {
       fetchChatbots()
     }
-  }, [profile?.id])
+  }, [user?.id])
 
   // Validate form data
   const validateForm = (data: ChatbotFormData): boolean => {
@@ -116,6 +146,11 @@ export default function ChatbotsPage() {
 
   // Create new chatbot
   const handleCreateChatbot = async () => {
+    if (!user?.id) {
+      toast.error('Tidak ada user yang terautentikasi')
+      return
+    }
+
     if (!validateForm(formData)) {
       toast.error('Mohon perbaiki kesalahan pada form')
       return
@@ -124,25 +159,34 @@ export default function ChatbotsPage() {
     try {
       setIsSubmitting(true)
       
+      console.log('Creating chatbot for user:', user.id)
+      console.log('Form data:', formData)
+      
+      const insertData = {
+        user_id: user.id, // Use the authenticated user's ID
+        name: formData.name,
+        whatsapp_number: formData.whatsapp_number,
+        business_description: formData.business_description,
+        ai_personality: formData.ai_personality,
+        is_active: false, // Start as inactive
+      }
+      
+      console.log('Insert data:', insertData)
+      
       const { data, error } = await supabase
         .from('chatbots')
-        .insert({
-          user_id: profile?.id,
-          name: formData.name,
-          whatsapp_number: formData.whatsapp_number,
-          business_description: formData.business_description,
-          ai_personality: formData.ai_personality,
-          is_active: false, // Start as inactive
-        })
+        .insert(insertData)
         .select()
         .single()
 
       if (error) {
         console.error('Error creating chatbot:', error)
-        toast.error('Gagal membuat chatbot')
+        toast.error('Gagal membuat chatbot: ' + error.message)
         return
       }
 
+      console.log('Created chatbot:', data)
+      
       // Add new chatbot to state
       setChatbots(prev => [data, ...prev])
       
@@ -175,12 +219,16 @@ export default function ChatbotsPage() {
       
       const { error } = await supabase
         .from('chatbots')
-        .update({ is_active: newStatus, updated_at: new Date().toISOString() })
+        .update({ 
+          is_active: newStatus, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', id)
+        .eq('user_id', user?.id || '') // Ensure user owns this chatbot
 
       if (error) {
         console.error('Error updating chatbot status:', error)
-        toast.error('Gagal mengubah status chatbot')
+        toast.error('Gagal mengubah status chatbot: ' + error.message)
         return
       }
 
@@ -207,10 +255,11 @@ export default function ChatbotsPage() {
         .from('chatbots')
         .delete()
         .eq('id', id)
+        .eq('user_id', user?.id || '') // Ensure user owns this chatbot
 
       if (error) {
         console.error('Error deleting chatbot:', error)
-        toast.error('Gagal menghapus chatbot')
+        toast.error('Gagal menghapus chatbot: ' + error.message)
         return
       }
 
@@ -221,6 +270,38 @@ export default function ChatbotsPage() {
       console.error('Error deleting chatbot:', error)
       toast.error('Gagal menghapus chatbot')
     }
+  }
+
+  // Show auth debug info if not authenticated
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Chatbots</h1>
+            <p className="text-muted-foreground">
+              Kelola chatbot AI untuk WhatsApp Business Anda
+            </p>
+          </div>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Authentication Required</CardTitle>
+            <CardDescription>
+              Anda perlu login untuk mengakses halaman ini.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p><strong>Auth Debug Info:</strong></p>
+              <pre className="text-xs bg-gray-100 p-2 rounded">
+                {JSON.stringify(authDebug, null, 2)}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -352,6 +433,20 @@ export default function ChatbotsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Debug Info (remove in production) */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Debug Info</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs bg-gray-100 p-2 rounded">
+              {JSON.stringify(authDebug, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
