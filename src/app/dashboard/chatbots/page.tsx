@@ -8,12 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { PlusIcon, PencilIcon, TrashIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline'
+import { PlusIcon } from '@heroicons/react/24/outline'
 import { toast } from 'sonner'
-import { createSupabaseClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useRequireAuth } from '@/contexts/auth-context'
 import { z } from 'zod'
-import { Bot, CheckCircle, MessageCircle, TrendingUp } from 'lucide-react'
+import { Bot, CheckCircle, MessageCircle, TrendingUp, Plus, PauseIcon, PlayIcon, PencilIcon, TrashIcon, MessageSquare } from 'lucide-react'
 
 // Validation schema for chatbot form
 const chatbotSchema = z.object({
@@ -48,7 +48,10 @@ export default function ChatbotsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [authDebug, setAuthDebug] = useState<any>(null)
+  const [testingChatbot, setTestingChatbot] = useState<string | null>(null)
+  const [testMessage, setTestMessage] = useState('')
+  const [testResponse, setTestResponse] = useState<string | null>(null)
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false)
   const [formData, setFormData] = useState<ChatbotFormData>({
     name: '',
     whatsapp_number: '',
@@ -57,22 +60,7 @@ export default function ChatbotsPage() {
   })
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ChatbotFormData, string>>>({})
 
-  const supabase = createSupabaseClient()
-
-  // Debug authentication state
-  useEffect(() => {
-    const debugAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setAuthDebug({
-        session: !!session,
-        user: !!user,
-        profile: !!profile,
-        userId: user?.id,
-        profileId: profile?.id
-      })
-    }
-    debugAuth()
-  }, [user, profile])
+  // Use the global authenticated supabase client
 
   // Fetch chatbots from database
   const fetchChatbots = async () => {
@@ -272,37 +260,82 @@ export default function ChatbotsPage() {
     }
   }
 
-  // Show auth debug info if not authenticated
-  if (!user) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Chatbots</h1>
-            <p className="text-muted-foreground">
-              Kelola chatbot AI untuk WhatsApp Business Anda
-            </p>
-          </div>
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Authentication Required</CardTitle>
-            <CardDescription>
-              Anda perlu login untuk mengakses halaman ini.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p><strong>Auth Debug Info:</strong></p>
-              <pre className="text-xs bg-gray-100 p-2 rounded">
-                {JSON.stringify(authDebug, null, 2)}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const testAI = async (chatbotId: string) => {
+    if (!testMessage.trim()) {
+      toast.error('Masukkan pesan untuk ditest')
+      return
+    }
+
+    try {
+      setTestingChatbot(chatbotId)
+      setTestResponse(null)
+      
+      const response = await fetch('/api/test-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: testMessage,
+          chatbotId: chatbotId,
+          testType: 'basic'
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to test AI')
+      }
+
+      setTestResponse(data.response)
+      toast.success(`AI Response generated! Tokens used: ${data.tokensUsed}, Cost: Rp ${(data.cost || 0).toFixed(2)}`)
+    } catch (error) {
+      console.error('Error testing AI:', error)
+      toast.error(error instanceof Error ? error.message : 'Gagal menguji AI')
+    } finally {
+      setTestingChatbot(null)
+    }
   }
+
+  const openTestDialog = (chatbotId: string) => {
+    setTestingChatbot(chatbotId)
+    setTestMessage('')
+    setTestResponse(null)
+    setIsTestDialogOpen(true)
+  }
+
+  // Show auth debug info if not authenticated
+  // if (!user) {
+  //   return (
+  //     <div className="space-y-6">
+  //       <div className="flex justify-between items-center">
+  //         <div>
+  //           <h1 className="text-3xl font-bold tracking-tight">Chatbots</h1>
+  //           <p className="text-muted-foreground">
+  //             Kelola chatbot AI untuk WhatsApp Business Anda
+  //           </p>
+  //         </div>
+  //       </div>
+  //       <Card>
+  //         <CardHeader>
+  //           <CardTitle>Authentication Required</CardTitle>
+  //           <CardDescription>
+  //             Anda perlu login untuk mengakses halaman ini.
+  //           </CardDescription>
+  //         </CardHeader>
+  //         <CardContent>
+  //           <div className="space-y-2">
+  //             <p><strong>Auth Debug Info:</strong></p>
+  //             <pre className="text-xs bg-gray-100 p-2 rounded">
+  //               {JSON.stringify(authDebug, null, 2)}
+  //             </pre>
+  //           </div>
+  //         </CardContent>
+  //       </Card>
+  //     </div>
+  //   )
+  // }
 
   if (isLoading) {
     return (
@@ -329,7 +362,7 @@ export default function ChatbotsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
+        {/* <div> */}
           <h1 className="text-3xl font-bold tracking-tight">Chatbots</h1>
           <p className="text-muted-foreground">
             Kelola chatbot AI untuk WhatsApp Business Anda
@@ -431,22 +464,60 @@ export default function ChatbotsPage() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
-      {/* Debug Info (remove in production) */}
-      {process.env.NODE_ENV === 'development' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Debug Info</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="text-xs bg-gray-100 p-2 rounded">
-              {JSON.stringify(authDebug, null, 2)}
-            </pre>
-          </CardContent>
-        </Card>
-      )}
+      {/* Test AI Dialog */}
+      <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Test AI Chatbot</DialogTitle>
+            <DialogDescription>
+              Test your chatbot's AI responses with a sample message.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="test-message" className="block text-sm font-medium text-gray-700 mb-2">
+                Test Message
+              </label>
+              <textarea
+                id="test-message"
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                placeholder="Enter a message to test the AI response..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+              />
+            </div>
+            
+            {testResponse && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  AI Response
+                </label>
+                <div className="bg-gray-50 p-3 rounded-md border">
+                  <p className="text-gray-800 whitespace-pre-wrap">{testResponse}</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsTestDialogOpen(false)}
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => testingChatbot && testAI(testingChatbot)}
+                disabled={!testMessage.trim() }
+              >
+                {testingChatbot ? 'Test AI' : 'Test AI'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -562,6 +633,16 @@ export default function ChatbotsPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openTestDialog(chatbot.id)}
+                      disabled={isSubmitting}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Test AI
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

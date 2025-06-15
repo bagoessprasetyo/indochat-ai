@@ -1,3 +1,4 @@
+// import { createClient } from '@supabase/supabase-js'
 import { createClient } from '@supabase/supabase-js'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Database } from '@/types/database'
