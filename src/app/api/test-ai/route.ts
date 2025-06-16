@@ -1,4 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateAIResponse, generateProductRecommendation } from '@/lib/ai-service'
@@ -16,23 +16,66 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize Supabase client for API route
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      }
+    )
 
-    // Get user session
-    const { data: { user }, error: sessionError } = await supabase.auth.getUser()
-    console.log('dataaa',user);
-    if (sessionError || !user) {
+    // Debug request headers
+    console.log('Request debug:', {
+      hasCookie: !!request.headers.get('cookie'),
+      hasAuth: !!request.headers.get('authorization'),
+      userAgent: request.headers.get('user-agent')
+    })
+
+    // Get authenticated user - use getUser() for server-side auth
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError) {
+      console.log('❌ Authentication error:', authError.message)
+    }
+    
+    if (user) {
+      console.log('✅ User authenticated via cookies:', { userId: user.id })
+    } else {
+      console.log('❌ No authenticated user found')
+    }
+
+    if (!user) {
+      console.log('❌ Authentication failed')
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { 
+          error: 'User not authenticated. Please log in first.',
+          debug: {
+            authError: authError?.message,
+            hasCookie: !!request.headers.get('cookie')
+          }
+        },
         { status: 401 }
       )
     }
 
+    console.log('✅ User authenticated:', { userId: user.id })
+
     let aiResponse
     let context = ''
 
-    // If chatbotId is provided, get chatbot configuration
-    if (chatbotId) {
+    // If chatbotId is provided and not 'test', get chatbot configuration
+    if (chatbotId && chatbotId !== 'test') {
       const { data: chatbot, error: chatbotError } = await supabase
         .from('chatbots')
         .select('*')
@@ -57,7 +100,6 @@ Business Hours: ${chatbot.business_hours ? JSON.stringify(chatbot.business_hours
     // Handle different test types
     switch (testType) {
       case 'product_recommendation':
-        // Example products for testing
         const sampleProducts = [
           { name: 'Kopi Arabica Premium', description: 'Kopi arabica berkualitas tinggi dari Aceh', price: 85000 },
           { name: 'Kopi Robusta Original', description: 'Kopi robusta asli dengan rasa yang kuat', price: 65000 },
@@ -108,7 +150,7 @@ You are a sales assistant. Help the customer understand products and guide them 
       default: // basic
         aiResponse = await generateAIResponse(
           message,
-          context,
+          context || 'You are a helpful AI assistant for a business in Indonesia. Always respond in Indonesian.',
           {
             tone: 'friendly',
             maxTokens: 300,
@@ -124,7 +166,10 @@ You are a sales assistant. Help the customer understand products and guide them 
       cost: aiResponse.cost,
       model: aiResponse.model,
       testType,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      debug: {
+        userId: user.id
+      }
     })
 
   } catch (error) {

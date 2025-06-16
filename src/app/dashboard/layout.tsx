@@ -15,24 +15,35 @@ import {
 import {
   HomeIcon,
   ChatBubbleLeftRightIcon,
-  CogIcon,
+  Cog6ToothIcon,
   ChartBarIcon,
   PlusIcon,
   Bars3Icon,
   XMarkIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
+  BookOpenIcon,
+  ShoppingBagIcon,
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { MessageSquare } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Chatbots', href: '/dashboard/chatbots', icon: ChatBubbleLeftRightIcon },
+  {
+    name: 'WhatsApp',
+    href: '/dashboard/whatsapp',
+    icon: MessageSquare,
+    description: 'Manage WhatsApp integration'
+  },
+  { name: 'Knowledge Base', href: '/dashboard/knowledge', icon: BookOpenIcon },
+  { name: 'Products', href: '/dashboard/products', icon: ShoppingBagIcon },
   { name: 'Percakapan', href: '/dashboard/conversations', icon: ChatBubbleLeftRightIcon },
   { name: 'Analytics', href: '/dashboard/analytics', icon: ChartBarIcon },
-  { name: 'Pengaturan', href: '/dashboard/settings', icon: CogIcon },
+  { name: 'Pengaturan', href: '/dashboard/settings', icon: Cog6ToothIcon },
 ]
 
 export default function DashboardLayout({
@@ -54,6 +65,7 @@ export default function DashboardLayout({
   }
 
   return (
+    
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar */}
       <div className={cn(
@@ -195,7 +207,7 @@ export default function DashboardLayout({
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/settings" className="flex items-center">
-                      <CogIcon className="mr-2 h-4 w-4" />
+                      <Cog6ToothIcon className="mr-2 h-4 w-4" />
                       <span>Pengaturan</span>
                     </Link>
                   </DropdownMenuItem>

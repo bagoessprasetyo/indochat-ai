@@ -1,28 +1,10 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-// import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { type NextRequest } from 'next/server'
+import { updateSession } from './utils/supabase/middleware'
+// import { updateSession } from '@/utils/supabase/middleware'
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-
-  // Refresh session if expired - required for auth to work across pages
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  // If user is signed in and the current path is /auth/login or /auth/register redirect the user to /dashboard
-  if (session && (req.nextUrl.pathname === '/auth/login' || req.nextUrl.pathname === '/auth/register')) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
-
-  // If user is not signed in and the current path is /dashboard/* redirect the user to /auth/login
-  if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/auth/login', req.url))
-  }
-
-  return res
+export async function middleware(request: NextRequest) {
+  // Update user's auth session using the proper utility function
+  return await updateSession(request)
 }
 
 export const config = {

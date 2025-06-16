@@ -260,10 +260,20 @@ export function useRequireAuth() {
   useEffect(() => {
     console.log('🔍 useRequireAuth: Check auth state:', { hasUser: !!user, loading })
     
-    if (!loading && !user) {
-      console.log('❌ useRequireAuth: No user found, redirecting to login')
-      window.location.href = '/auth/login'
+    // Add a small delay to allow for auth state changes to propagate
+    const timeoutId = setTimeout(() => {
+      if (!loading && !user) {
+        console.log('❌ useRequireAuth: No user found after timeout, redirecting to login')
+        window.location.href = '/auth/login'
+      }
+    }, 500) // 500ms delay to allow auth state to settle
+    
+    // Clear timeout if user is found or component unmounts
+    if (user || loading) {
+      clearTimeout(timeoutId)
     }
+    
+    return () => clearTimeout(timeoutId)
   }, [user, loading])
   
   return { user, profile, loading }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,106 +30,204 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
+import { createSupabaseClient } from '@/lib/supabase'
+import { useRequireAuth } from '@/contexts/auth-context'
+import type { Database } from '@/types/database'
 
-// Mock data - will be replaced with real data from Supabase
-const mockConversations = [
-  {
-    id: '1',
-    customer_name: 'Ahmad Rizki',
-    customer_phone: '+62812345678',
-    chatbot_name: 'Customer Service Bot',
-    last_message: 'Terima kasih atas bantuannya! Sangat membantu.',
-    last_message_time: '2024-01-20T10:30:00Z',
-    status: 'resolved',
-    message_count: 12,
-    ai_handled: true,
-    satisfaction_score: 5,
-  },
-  {
-    id: '2',
-    customer_name: 'Siti Nurhaliza',
-    customer_phone: '+62812345679',
-    chatbot_name: 'Sales Assistant',
-    last_message: 'Apakah produk ini masih tersedia?',
-    last_message_time: '2024-01-20T09:15:00Z',
-    status: 'pending',
-    message_count: 5,
-    ai_handled: false,
-    satisfaction_score: null,
-  },
-  {
-    id: '3',
-    customer_name: 'Budi Santoso',
-    customer_phone: '+62812345680',
-    chatbot_name: 'Customer Service Bot',
-    last_message: 'Bot: Baik, saya akan bantu Anda dengan masalah tersebut.',
-    last_message_time: '2024-01-20T08:45:00Z',
-    status: 'active',
-    message_count: 8,
-    ai_handled: true,
-    satisfaction_score: null,
-  },
-  {
-    id: '4',
-    customer_name: 'Maya Putri',
-    customer_phone: '+62812345681',
-    chatbot_name: 'Sales Assistant',
-    last_message: 'Saya butuh bantuan manusia untuk ini.',
-    last_message_time: '2024-01-20T07:20:00Z',
-    status: 'escalated',
-    message_count: 15,
-    ai_handled: false,
-    satisfaction_score: 3,
-  },
-]
+// Types for our conversation data
+type ConversationRow = Database['public']['Tables']['conversations']['Row']
+type MessageRow = Database['public']['Tables']['messages']['Row']
+type ChatbotRow = Database['public']['Tables']['chatbots']['Row']
 
-const mockMessages = {
-  '1': [
-    { id: '1', sender: 'customer', message: 'Halo, saya butuh bantuan dengan pesanan saya', timestamp: '2024-01-20T10:00:00Z' },
-    { id: '2', sender: 'bot', message: 'Halo! Saya siap membantu Anda. Bisa berikan nomor pesanan Anda?', timestamp: '2024-01-20T10:01:00Z' },
-    { id: '3', sender: 'customer', message: 'Nomor pesanan: ORD-12345', timestamp: '2024-01-20T10:02:00Z' },
-    { id: '4', sender: 'bot', message: 'Terima kasih. Saya cek dulu ya... Pesanan Anda sedang dalam proses pengiriman dan akan tiba besok.', timestamp: '2024-01-20T10:03:00Z' },
-    { id: '5', sender: 'customer', message: 'Terima kasih atas bantuannya! Sangat membantu.', timestamp: '2024-01-20T10:30:00Z' },
-  ]
+interface ConversationWithDetails extends ConversationRow {
+  chatbot_name?: string
+  last_message?: string
+  last_message_time?: string | null
+  message_count?: number
+  ai_handled?: boolean
+  satisfaction_score?: number | null
+}
+
+interface MessageWithDetails extends MessageRow {
+  sender: 'customer' | 'bot'
+  message: string
+  timestamp: string
 }
 
 export default function ConversationsPage() {
-  const [conversations, setConversations] = useState(mockConversations)
-  const [selectedConversation, setSelectedConversation] = useState(null)
+  const { user } = useRequireAuth()
+  const [conversations, setConversations] = useState<ConversationWithDetails[]>([])
+  const [selectedConversation, setSelectedConversation] = useState<ConversationWithDetails | null>(null)
+  const [messages, setMessages] = useState<MessageWithDetails[]>([])
+  const [chatbots, setChatbots] = useState<ChatbotRow[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [chatbotFilter, setChatbotFilter] = useState('all')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+  const supabase = createSupabaseClient()
+
+  // Fetch conversations from database
+  const fetchConversations = async () => {
+    if (!user?.id) return
+
+    try {
+      setIsLoading(true)
+      
+      // First, get user's chatbots
+      const { data: userChatbots, error: chatbotsError } = await supabase
+        .from('chatbots')
+        .select('*')
+        .eq('user_id', user.id)
+      
+      if (chatbotsError) {
+        console.error('Error fetching chatbots:', chatbotsError)
+        return
+      }
+      
+      setChatbots(userChatbots || [])
+      const chatbotIds = userChatbots?.map(bot => bot.id) || []
+      
+      if (chatbotIds.length === 0) {
+        setConversations([])
+        return
+      }
+
+      // Fetch conversations for user's chatbots with last message
+      const { data: conversationsData, error: conversationsError } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          chatbots!inner(name)
+        `)
+        .in('chatbot_id', chatbotIds)
+        .order('last_message_at', { ascending: false })
+        .limit(50)
+      
+      if (conversationsError) {
+        console.error('Error fetching conversations:', conversationsError)
+        return
+      }
+
+      // Get message counts and last messages for each conversation
+      const conversationsWithDetails = await Promise.all(
+        (conversationsData || []).map(async (conv) => {
+          // Get message count
+          const { count } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+          
+          // Get last message
+          const { data: lastMessage } = await supabase
+            .from('messages')
+            .select('content, is_from_customer, ai_generated')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+          
+          // Check if conversation is AI handled (has AI generated messages)
+          const { data: aiMessages } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', conv.id)
+            .eq('ai_generated', true)
+            .limit(1)
+
+          return {
+            ...conv,
+            chatbot_name: (conv.chatbots as any)?.name || 'Unknown Bot',
+            last_message: lastMessage?.content || 'No messages yet',
+            message_count: count || 0,
+            ai_handled: (aiMessages?.length || 0) > 0
+          }
+        })
+      )
+      
+      setConversations(conversationsWithDetails)
+    } catch (error) {
+      console.error('Error in fetchConversations:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Fetch messages for a specific conversation
+  const fetchMessages = async (conversationId: string) => {
+    try {
+      setIsLoadingMessages(true)
+      
+      const { data: messagesData, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+      
+      if (error) {
+        console.error('Error fetching messages:', error)
+        return
+      }
+      
+      // Transform messages to match our interface
+      const transformedMessages: MessageWithDetails[] = (messagesData || []).map(msg => ({
+        ...msg,
+        sender: msg.is_from_customer ? 'customer' : 'bot',
+        message: msg.content,
+        timestamp: msg.created_at || msg.timestamp || new Date().toISOString()
+      }))
+      
+      setMessages(transformedMessages)
+    } catch (error) {
+      console.error('Error in fetchMessages:', error)
+    } finally {
+      setIsLoadingMessages(false)
+    }
+  }
+
+  // Load conversations on component mount
+  useEffect(() => {
+    fetchConversations()
+  }, [user?.id])
+
+  // Handle conversation selection
+  const handleConversationSelect = (conversation: ConversationWithDetails) => {
+    setSelectedConversation(conversation)
+    fetchMessages(conversation.id)
+  }
 
   const filteredConversations = conversations.filter(conv => {
-    const matchesSearch = conv.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (conv.customer_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          conv.customer_phone.includes(searchTerm) ||
-                         conv.last_message.toLowerCase().includes(searchTerm.toLowerCase())
+                         (conv.last_message?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || conv.status === statusFilter
     const matchesChatbot = chatbotFilter === 'all' || conv.chatbot_name === chatbotFilter
     
     return matchesSearch && matchesStatus && matchesChatbot
   })
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null) => {
     const statusConfig = {
-      active: { label: 'Aktif', variant: 'default', icon: ChatBubbleLeftRightIcon },
-      pending: { label: 'Menunggu', variant: 'secondary', icon: ClockIcon },
-      resolved: { label: 'Selesai', variant: 'outline', icon: CheckCircleIcon },
-      escalated: { label: 'Escalated', variant: 'destructive', icon: ExclamationTriangleIcon },
+      active: { label: 'Aktif', variant: 'default' as const, icon: ChatBubbleLeftRightIcon },
+      pending: { label: 'Menunggu', variant: 'secondary' as const, icon: ClockIcon },
+      resolved: { label: 'Selesai', variant: 'outline' as const, icon: CheckCircleIcon },
+      escalated: { label: 'Eskalasi', variant: 'destructive' as const, icon: ExclamationTriangleIcon },
     }
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
     const Icon = config.icon
     
     return (
-      <Badge variant={config.variant as "default" | "secondary" | "outline" | "destructive"} className="flex items-center gap-1">
+      <Badge variant={config.variant} className="flex items-center gap-1">
         <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
     )
   }
 
-  const formatTime = (timestamp: string | number | Date) => {
+  const formatTime = (timestamp: string | number | Date | null) => {
+    if (!timestamp) return 'Tidak diketahui'
+    
     const date = new Date(timestamp)
     const now = new Date()
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
@@ -254,7 +352,7 @@ const uniqueChatbots = Array.from(new Set(conversations.map(conv => conv.chatbot
                 <SelectContent>
                   <SelectItem value="all">Semua Chatbot</SelectItem>
                   {uniqueChatbots.map(chatbot => (
-                    <SelectItem key={chatbot} value={chatbot}>{chatbot}</SelectItem>
+                    <SelectItem key={chatbot} value={chatbot || ''}>{chatbot || 'Unknown Bot'}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -264,8 +362,38 @@ const uniqueChatbots = Array.from(new Set(conversations.map(conv => conv.chatbot
       </Card>
 
       {/* Conversations List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredConversations.map((conversation) => (
+      {isLoading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-5 w-5 bg-gray-200 rounded"></div>
+                    <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="h-6 w-16 bg-gray-200 rounded"></div>
+                </div>
+                <div className="h-3 w-32 bg-gray-200 rounded"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="h-4 w-full bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                    <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredConversations.map((conversation) => (
           <Card key={conversation.id} className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -288,7 +416,7 @@ const uniqueChatbots = Array.from(new Set(conversations.map(conv => conv.chatbot
                 </div>
                 
                 <div className="flex justify-between items-center text-xs text-gray-500">
-                  <span>{formatTime(conversation.last_message_time)}</span>
+                  <span>{formatTime(conversation.last_message_time ?? null)}</span>
                   <span>{conversation.message_count} pesan</span>
                 </div>
                 
@@ -312,7 +440,11 @@ const uniqueChatbots = Array.from(new Set(conversations.map(conv => conv.chatbot
                   
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleConversationSelect(conversation)}
+                      >
                         <EyeIcon className="h-4 w-4 mr-1" />
                         Lihat
                       </Button>
@@ -325,28 +457,50 @@ const uniqueChatbots = Array.from(new Set(conversations.map(conv => conv.chatbot
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        {mockMessages[conversation.id as keyof typeof mockMessages]?.map((message) => (
-                          <div
-                            key={message.id}
-                            className={`flex ${message.sender === 'customer' ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`max-w-[80%] p-3 rounded-lg ${
-                                message.sender === 'customer'
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-gray-100 text-gray-900'
-                              }`}
-                            >
-                              <p className="text-sm">{message.message}</p>
-                              <p className="text-xs mt-1 opacity-70">
-                                {formatTime(message.timestamp)}
-                              </p>
+                        {selectedConversation?.id === conversation.id ? (
+                          isLoadingMessages ? (
+                            <div className="space-y-4">
+                              {[...Array(5)].map((_, i) => (
+                                <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                                  <div className="max-w-[80%] p-3 rounded-lg bg-gray-200 animate-pulse">
+                                    <div className="h-4 w-32 bg-gray-300 rounded mb-2"></div>
+                                    <div className="h-3 w-16 bg-gray-300 rounded"></div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          </div>
-                        )) || (
+                          ) : (
+                            messages.length > 0 ? (
+                              messages.map((message) => (
+                                <div
+                                  key={message.id}
+                                  className={`flex ${message.is_from_customer ? 'justify-end' : 'justify-start'}`}
+                                >
+                                  <div
+                                    className={`max-w-[80%] p-3 rounded-lg ${
+                                      message.is_from_customer
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-100 text-gray-900'
+                                    }`}
+                                  >
+                                    <p className="text-sm">{message.content}</p>
+                                    <p className="text-xs mt-1 opacity-70">
+                                      {formatTime(message.created_at)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center text-gray-500 py-8">
+                                <ChatBubbleLeftRightIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                                <p>Tidak ada pesan dalam percakapan ini</p>
+                              </div>
+                            )
+                          )
+                        ) : (
                           <div className="text-center text-gray-500 py-8">
                             <ChatBubbleLeftRightIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                            <p>Pesan tidak tersedia untuk preview</p>
+                            <p>Klik untuk memuat pesan...</p>
                           </div>
                         )}
                       </div>
@@ -356,10 +510,11 @@ const uniqueChatbots = Array.from(new Set(conversations.map(conv => conv.chatbot
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {filteredConversations.length === 0 && (
+      {!isLoading && filteredConversations.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-400 mb-4" />

@@ -128,7 +128,7 @@ Personality: ${chatbot.ai_personality || 'Friendly and helpful'}
 Business Hours: ${chatbot.business_hours ? JSON.stringify(chatbot.business_hours) : 'Not specified'}
 `
 
-    // Generate AI response
+    // Generate AI response with knowledge base integration
     const aiResponse = await generateAIResponse(
       messageText,
       businessContext,
@@ -136,7 +136,9 @@ Business Hours: ${chatbot.business_hours ? JSON.stringify(chatbot.business_hours
         tone: chatbot.ai_personality?.includes('formal') ? 'formal' : 
               chatbot.ai_personality?.includes('casual') ? 'casual' : 'friendly',
         maxTokens: 300,
-        temperature: 0.7
+        temperature: 0.7,
+        chatbotId: chatbot.id,
+        useKnowledgeBase: true
       }
     )
 
@@ -162,6 +164,10 @@ Business Hours: ${chatbot.business_hours ? JSON.stringify(chatbot.business_hours
           ai_generated: true,
           tokens_used: aiResponse.tokensUsed,
           ai_cost: aiResponse.cost,
+          metadata: {
+            knowledgeUsed: aiResponse.knowledgeUsed,
+            knowledgeSource: aiResponse.knowledgeSource
+          },
           created_at: new Date().toISOString()
         }
       ])

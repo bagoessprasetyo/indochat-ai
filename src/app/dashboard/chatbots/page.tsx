@@ -266,6 +266,11 @@ export default function ChatbotsPage() {
       return
     }
 
+    if (!user) {
+      toast.error('Anda harus login untuk menguji AI')
+      return
+    }
+
     try {
       setTestingChatbot(chatbotId)
       setTestResponse(null)
@@ -275,6 +280,7 @@ export default function ChatbotsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: include cookies for authentication
         body: JSON.stringify({
           message: testMessage,
           chatbotId: chatbotId,
@@ -285,7 +291,13 @@ export default function ChatbotsPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to test AI')
+        if (response.status === 401) {
+          toast.error('Autentikasi gagal. Silakan login ulang.')
+          // Optionally redirect to login
+          // window.location.href = '/auth/login'
+          // return
+        }
+        throw new Error(data.error || `HTTP ${response.status}: Gagal menguji AI`)
       }
 
       setTestResponse(data.response)
